@@ -92,8 +92,8 @@ export default function Sidebar() {
         <MenuItem
           icon={LayoutDashboard}
           label="Dashboard"
-          href="/"
-          isActive={pathname === "/"}
+          href="/Dashboard"
+          isActive={pathname === "/Dashboard"}
         />
 
         <MenuItem
