@@ -33,7 +33,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import Header from "@/components/custom/Header";
 
 interface Client {
   id: number;

@@ -1,9 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ChevronLeft, Mail, Bell, MoreHorizontal } from "lucide-react";
+import { Mail, Bell } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 interface HeaderProps {

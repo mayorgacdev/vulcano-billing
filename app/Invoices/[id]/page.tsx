@@ -1,11 +1,6 @@
 "use client";
 
-import { MouseEventHandler, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  ChevronDown,
-  LucideIcon,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -23,41 +18,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-interface MenuItemProps {
-  icon: LucideIcon; // Aquí aceptamos íconos de tipo LucideIcon como Package
-  label: string;
-  isActive?: boolean;
-  hasDropdown?: boolean;
-  onClick: MouseEventHandler<HTMLButtonElement>;
-}
 
-const MenuItem = ({
-  icon: Icon,
-  label,
-  isActive = false,
-  hasDropdown = false,
-  onClick,
-}: MenuItemProps) => {
-  return (
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={onClick}
-      className={`flex items-center w-full px-4 py-3 text-sm rounded-lg transition-all duration-200 ${
-        isActive
-          ? "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg"
-          : "text-gray-700 hover:bg-gray-100 hover:shadow-md"
-      }`}
-    >
-      <Icon className="w-5 h-5 mr-3" />
-      <span className="flex-grow text-left">{label}</span>
-      {hasDropdown && <ChevronDown className="w-4 h-4" />}
-    </motion.button>
-  );
-};
 
 export default function InvoiceDetails() {
-  const [activeItem, setActiveItem] = useState("Quotes & Invoices");
 
   return (
     <main className="container mx-auto p-6 max-w-7xl bg-gradient-to-br from-blue-50 to-teal-50 rounded-xl">
