@@ -1,24 +1,11 @@
 "use client";
 
 import { MouseEventHandler, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ChevronDown,
-  LayoutDashboard,
-  FileText,
-  Package,
-  Users,
-  BarChart2,
-  Code,
-  MessageCircle,
-  HelpCircle,
-  Mail,
-  Bell,
-  MoreHorizontal,
-  ChevronLeft,
   LucideIcon,
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -35,8 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import Header from "@/components/custom/Header";
 
 interface MenuItemProps {
   icon: LucideIcon; // Aquí aceptamos íconos de tipo LucideIcon como Package
