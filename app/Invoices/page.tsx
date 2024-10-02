@@ -12,6 +12,7 @@ import {
   UserPlus,
   ChevronUp,
   ChevronDown,
+  FileText,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -33,11 +34,32 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import jsPDFInvoiceTemplate from "jspdf-invoice-template";
 
 interface Client {
   id: number;
   name: string;
   email: string;
+  address: string;
+  phone: string;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  vat: number;
+  unit: string;
 }
 
 interface Invoice {
@@ -45,16 +67,34 @@ interface Invoice {
   invoiceNumber: string;
   clientId: number;
   clientName: string;
-  amount: number;
+  products: Product[];
   date: string;
   dueDate: string;
   status: "paid" | "pending" | "overdue";
 }
 
 const initialClients: Client[] = [
-  { id: 1, name: "Acme Corporation", email: "contact@acme.com" },
-  { id: 2, name: "TechStart Inc.", email: "info@techstart.com" },
-  { id: 3, name: "Global Services Ltd.", email: "hello@globalservices.com" },
+  {
+    id: 1,
+    name: "Acme Corporation",
+    email: "contact@acme.com",
+    address: "123 Acme St, Acme City",
+    phone: "123-456-7890",
+  },
+  {
+    id: 2,
+    name: "TechStart Inc.",
+    email: "info@techstart.com",
+    address: "456 Tech Ave, Start Town",
+    phone: "234-567-8901",
+  },
+  {
+    id: 3,
+    name: "Global Services Ltd.",
+    email: "hello@globalservices.com",
+    address: "789 Global Rd, Service City",
+    phone: "345-678-9012",
+  },
 ];
 
 const initialInvoices: Invoice[] = [
@@ -63,7 +103,26 @@ const initialInvoices: Invoice[] = [
     invoiceNumber: "INV-001",
     clientId: 1,
     clientName: "Acme Corporation",
-    amount: 1500.0,
+    products: [
+      {
+        id: 1,
+        name: "Product A",
+        description: "High-quality widget",
+        quantity: 2,
+        unitPrice: 100,
+        vat: 10,
+        unit: "pc",
+      },
+      {
+        id: 2,
+        name: "Product B",
+        description: "Premium gadget",
+        quantity: 1,
+        unitPrice: 200,
+        vat: 10,
+        unit: "pc",
+      },
+    ],
     date: "2023-05-01",
     dueDate: "2023-05-15",
     status: "paid",
@@ -73,7 +132,17 @@ const initialInvoices: Invoice[] = [
     invoiceNumber: "INV-002",
     clientId: 2,
     clientName: "TechStart Inc.",
-    amount: 2750.5,
+    products: [
+      {
+        id: 1,
+        name: "Product C",
+        description: "Advanced tool",
+        quantity: 3,
+        unitPrice: 150,
+        vat: 10,
+        unit: "pc",
+      },
+    ],
     date: "2023-05-05",
     dueDate: "2023-05-20",
     status: "pending",
@@ -83,7 +152,26 @@ const initialInvoices: Invoice[] = [
     invoiceNumber: "INV-003",
     clientId: 3,
     clientName: "Global Services Ltd.",
-    amount: 900.75,
+    products: [
+      {
+        id: 1,
+        name: "Product D",
+        description: "Professional service",
+        quantity: 1,
+        unitPrice: 500,
+        vat: 10,
+        unit: "hr",
+      },
+      {
+        id: 2,
+        name: "Product E",
+        description: "Consultation",
+        quantity: 2,
+        unitPrice: 200,
+        vat: 10,
+        unit: "hr",
+      },
+    ],
     date: "2023-04-28",
     dueDate: "2023-05-12",
     status: "overdue",
@@ -96,7 +184,7 @@ const statusColors = {
   overdue: "bg-red-500",
 };
 
-export default function InvoiceManagement() {
+export default function InvoiceManagment() {
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const [clients, setClients] = useState<Client[]>(initialClients);
   const [showForm, setShowForm] = useState(false);
@@ -114,7 +202,7 @@ export default function InvoiceManagement() {
     invoiceNumber: "",
     clientId: 0,
     clientName: "",
-    amount: 0,
+    products: [],
     date: "",
     dueDate: "",
     status: "pending",
@@ -124,6 +212,18 @@ export default function InvoiceManagement() {
     id: 0,
     name: "",
     email: "",
+    address: "",
+    phone: "",
+  });
+
+  const [newProduct, setNewProduct] = useState<Product>({
+    id: 0,
+    name: "",
+    description: "",
+    quantity: 0,
+    unitPrice: 0,
+    vat: 0,
+    unit: "",
   });
 
   const handleInputChange = (
@@ -153,6 +253,17 @@ export default function InvoiceManagement() {
     setNewClient((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleProductInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewProduct((prev) => ({
+      ...prev,
+      [name]:
+        name === "name" || name === "description" || name === "unit"
+          ? value
+          : Number(value),
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingInvoice) {
@@ -171,7 +282,7 @@ export default function InvoiceManagement() {
       invoiceNumber: "",
       clientId: 0,
       clientName: "",
-      amount: 0,
+      products: [],
       date: "",
       dueDate: "",
       status: "pending",
@@ -189,8 +300,47 @@ export default function InvoiceManagement() {
       clientId: newClientWithId.id,
       clientName: newClientWithId.name,
     }));
-    setNewClient({ id: 0, name: "", email: "" });
+    setNewClient({ id: 0, name: "", email: "", address: "", phone: "" });
     setShowNewClientForm(false);
+  };
+
+  const handleAddProduct = () => {
+    setNewInvoice((prev) => ({
+      ...prev,
+      products: [
+        ...prev.products,
+        { ...newProduct, id: prev.products.length + 1 },
+      ],
+    }));
+    setNewProduct({
+      id: 0,
+      name: "",
+      description: "",
+      quantity: 0,
+      unitPrice: 0,
+      vat: 0,
+      unit: "",
+    });
+  };
+
+  const handleEditProduct = (
+    productId: number,
+    field: keyof Product,
+    value: string | number
+  ) => {
+    setNewInvoice((prev) => ({
+      ...prev,
+      products: prev.products.map((product) =>
+        product.id === productId ? { ...product, [field]: value } : product
+      ),
+    }));
+  };
+ 
+  const handleDeleteProduct = (productId: number) => {
+    setNewInvoice((prev) => ({
+      ...prev,
+      products: prev.products.filter((product) => product.id !== productId),
+    }));
   };
 
   const handleEdit = (invoice: Invoice) => {
@@ -229,6 +379,149 @@ export default function InvoiceManagement() {
       invoice.clientName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const calculateSubtotal = (products: Product[]) => {
+    return products.reduce(
+      (total, product) => total + product.quantity * product.unitPrice,
+      0
+    );
+  };
+
+  const calculateVAT = (products: Product[]) => {
+    return products.reduce(
+      (total, product) =>
+        total + (product.quantity * product.unitPrice * product.vat) / 100,
+      0
+    );
+  };
+
+  const calculateTotal = (products: Product[]) => {
+    return calculateSubtotal(products) + calculateVAT(products);
+  };
+
+  const generatePDF = (invoice: Invoice) => {
+    const client = clients.find((c) => c.id === invoice.clientId);
+    const props = {
+      outputType: "save",
+      returnJsPDFDocObject: true,
+      fileName: `Invoice_${invoice.invoiceNumber}`,
+      orientationLandscape: false,
+      compress: true,
+      logo: {
+        src: "https://raw.githubusercontent.com/edisonneza/jspdf-invoice-template/demo/images/logo.png",
+        width: 53.33,
+        height: 26.66,
+        margin: {
+          top: 0,
+          left: 0,
+        },
+      },
+      stamp: {
+        inAllPages: true,
+        src: "https://raw.githubusercontent.com/edisonneza/jspdf-invoice-template/demo/images/qr_code.jpg",
+        width: 20,
+        height: 20,
+        margin: {
+          top: 0,
+          left: 0,
+        },
+      },
+      business: {
+        name: "Your Business Name",
+        address: "Your Business Address",
+        phone: "Your Business Phone",
+        email: "your@email.com",
+        email_1: "your@email.com",
+        website: "www.example.com",
+      },
+      contact: {
+        label: "Invoice issued for:",
+        name: client?.name || "",
+        address: client?.address || "",
+        phone: client?.phone || "",
+        email: client?.email || "",
+        otherInfo: "",
+      },
+      invoice: {
+        label: "Invoice #: ",
+        num: Number(invoice.invoiceNumber),
+        invDate: `Payment Date: ${invoice.date}`,
+        invGenDate: `Invoice Date: ${new Date().toLocaleDateString()}`,
+        headerBorder: false,
+        tableBodyBorder: false,
+        header: [
+          {
+            title: "#",
+            style: {
+              width: 10,
+            },
+          },
+          {
+            title: "Title",
+            style: {
+              width: 30,
+            },
+          },
+          {
+            title: "Description",
+            style: {
+              width: 80,
+            },
+          },
+          { title: "Price" },
+          { title: "Quantity" },
+          { title: "Unit" },
+          { title: "Total" },
+        ],
+        table: invoice.products.map((product, index) => [
+          index + 1,
+          product.name,
+          product.description,
+          product.unitPrice,
+          product.quantity,
+          product.unit,
+          product.quantity * product.unitPrice,
+        ]),
+        additionalRows: [
+          {
+            col1: "Subtotal:",
+            col2: calculateSubtotal(invoice.products).toFixed(2),
+            col3: "EUR",
+            style: {
+              fontSize: 10,
+            },
+          },
+          {
+            col1: "VAT:",
+            col2: calculateVAT(invoice.products).toFixed(2),
+            col3: "EUR",
+            style: {
+              fontSize: 10,
+            },
+          },
+          {
+            col1: "Total:",
+            col2: calculateTotal(invoice.products).toFixed(2),
+            col3: "EUR",
+            style: {
+              fontSize: 14,
+            },
+          },
+        ],
+        invDescLabel: "Invoice Note",
+        invDesc:
+          "Thank you for your business. Please process this invoice within the due date.",
+      },
+      footer: {
+        text: "The invoice is created on a computer and is valid without the signature and stamp.",
+      },
+      page: {
+        num: "Page 1 of 1",
+      },
+    };
+
+    const pdfObject = jsPDFInvoiceTemplate(props);
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-7xl bg-gradient-to-br from-blue-50 to-teal-50 rounded-xl">
       <motion.div
@@ -265,7 +558,7 @@ export default function InvoiceManagement() {
                 invoiceNumber: "",
                 clientId: 0,
                 clientName: "",
-                amount: 0,
+                products: [],
                 date: "",
                 dueDate: "",
                 status: "pending",
@@ -374,6 +667,26 @@ export default function InvoiceManagement() {
                                   required
                                 />
                               </div>
+                              <div>
+                                <Label htmlFor="address">Dirección</Label>
+                                <Input
+                                  id="address"
+                                  name="address"
+                                  value={newClient.address}
+                                  onChange={handleClientInputChange}
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="phone">Teléfono</Label>
+                                <Input
+                                  id="phone"
+                                  name="phone"
+                                  value={newClient.phone}
+                                  onChange={handleClientInputChange}
+                                  required
+                                />
+                              </div>
                               <Button type="submit" className="w-full">
                                 Crear Cliente
                               </Button>
@@ -381,17 +694,6 @@ export default function InvoiceManagement() {
                           </DialogContent>
                         </Dialog>
                       </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="amount">Monto</Label>
-                      <Input
-                        id="amount"
-                        name="amount"
-                        type="number"
-                        value={newInvoice.amount}
-                        onChange={handleInputChange}
-                        required
-                      />
                     </div>
                     <div>
                       <Label htmlFor="date">Fecha de Emisión</Label>
@@ -437,6 +739,170 @@ export default function InvoiceManagement() {
                       </Select>
                     </div>
                   </div>
+
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold mb-2">Productos</h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Descripción</TableHead>
+                          <TableHead>Cantidad</TableHead>
+                          <TableHead>Precio Unitario</TableHead>
+                          <TableHead>IVA (%)</TableHead>
+                          <TableHead>Unidad</TableHead>
+                          <TableHead>Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {newInvoice.products.map((product) => (
+                          <TableRow key={product.id}>
+                            <TableCell>
+                              <Input
+                                value={product.name}
+                                onChange={(e) =>
+                                  handleEditProduct(
+                                    product.id,
+                                    "name",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Nombre del producto"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={product.description}
+                                onChange={(e) =>
+                                  handleEditProduct(
+                                    product.id,
+                                    "description",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Descripción"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={product.quantity}
+                                onChange={(e) =>
+                                  handleEditProduct(
+                                    product.id,
+                                    "quantity",
+                                    Number(e.target.value)
+                                  )
+                                }
+                                placeholder="Cantidad"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={product.unitPrice}
+                                onChange={(e) =>
+                                  handleEditProduct(
+                                    product.id,
+                                    "unitPrice",
+                                    Number(e.target.value)
+                                  )
+                                }
+                                placeholder="Precio unitario"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={product.vat}
+                                onChange={(e) =>
+                                  handleEditProduct(
+                                    product.id,
+                                    "vat",
+                                    Number(e.target.value)
+                                  )
+                                }
+                                placeholder="IVA %"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={product.unit}
+                                onChange={(e) =>
+                                  handleEditProduct(
+                                    product.id,
+                                    "unit",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Unidad"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteProduct(product.id)}
+                              >
+                                <Trash2 size={16} />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <div className="mt-2 grid grid-cols-6 gap-2">
+                      <Input
+                        value={newProduct.name}
+                        onChange={(e) => handleProductInputChange(e)}
+                        name="name"
+                        placeholder="Nombre del producto"
+                      />
+                      <Input
+                        value={newProduct.description}
+                        onChange={(e) => handleProductInputChange(e)}
+                        name="description"
+                        placeholder="Descripción"
+                      />
+                      <Input
+                        type="number"
+                        value={newProduct.quantity}
+                        onChange={(e) => handleProductInputChange(e)}
+                        name="quantity"
+                        placeholder="Cantidad"
+                      />
+                      <Input
+                        type="number"
+                        value={newProduct.unitPrice}
+                        onChange={(e) => handleProductInputChange(e)}
+                        name="unitPrice"
+                        placeholder="Precio unitario"
+                      />
+                      <Input
+                        type="number"
+                        value={newProduct.vat}
+                        onChange={(e) => handleProductInputChange(e)}
+                        name="vat"
+                        placeholder="IVA %"
+                      />
+                      <Input
+                        value={newProduct.unit}
+                        onChange={(e) => handleProductInputChange(e)}
+                        name="unit"
+                        placeholder="Unidad"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleAddProduct}
+                      variant="outline"
+                      className="mt-2 w-full"
+                    >
+                      <Plus size={16} className="mr-2" /> Agregar Producto
+                    </Button>
+                  </div>
+
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-r from-blue-600 to-teal-600 text-white shadow-md hover:shadow-lg transition-all duration-300"
@@ -487,18 +953,6 @@ export default function InvoiceManagement() {
                   </th>
                   <th
                     className="px-4 py-2 cursor-pointer"
-                    onClick={() => handleSort("amount")}
-                  >
-                    Monto
-                    {sortConfig?.key === "amount" &&
-                      (sortConfig.direction === "ascending" ? (
-                        <ChevronUp size={14} className="inline ml-1" />
-                      ) : (
-                        <ChevronDown size={14} className="inline ml-1" />
-                      ))}
-                  </th>
-                  <th
-                    className="px-4 py-2 cursor-pointer"
                     onClick={() => handleSort("date")}
                   >
                     Fecha de Emisión
@@ -533,6 +987,7 @@ export default function InvoiceManagement() {
                         <ChevronDown size={14} className="inline ml-1" />
                       ))}
                   </th>
+                  <th className="px-4 py-2">Total</th>
                   <th className="px-4 py-2">Acciones</th>
                 </tr>
               </thead>
@@ -549,7 +1004,6 @@ export default function InvoiceManagement() {
                     >
                       <td className="px-4 py-2">{invoice.invoiceNumber}</td>
                       <td className="px-4 py-2">{invoice.clientName}</td>
-                      <td className="px-4 py-2">${invoice.amount}</td>
                       <td className="px-4 py-2">{invoice.date}</td>
                       <td className="px-4 py-2">{invoice.dueDate}</td>
                       <td className="px-4 py-2">
@@ -561,6 +1015,9 @@ export default function InvoiceManagement() {
                           {invoice.status.charAt(0).toUpperCase() +
                             invoice.status.slice(1)}
                         </Badge>
+                      </td>
+                      <td className="px-4 py-2">
+                        ${calculateTotal(invoice.products).toFixed(2)}
                       </td>
                       <td className="px-4 py-2">
                         <div className="flex justify-end space-x-2">
@@ -587,6 +1044,13 @@ export default function InvoiceManagement() {
                             onClick={() => handleDelete(invoice.id)}
                           >
                             <Trash2 size={16} />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => generatePDF(invoice)}
+                          >
+                            <FileText size={16} />
                           </Button>
                         </div>
                       </td>
